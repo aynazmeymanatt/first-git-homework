@@ -1,0 +1,46 @@
+services:
+  proxy:
+    build: .
+    ports:
+      - "80:8080"
+    environment:
+      UPSTREAM_URL: http://legacy:8081
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      JWT_ISSUER: http-lab
+      JWT_AUDIENCE: legacy-api
+    secrets:
+      - jwt_secret
+    networks:
+      - public
+      - private
+    depends_on:
+      - legacy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+
+  legacy:
+    image: ghcr.io/mccutchen/go-httpbin:2.20.0
+    environment:
+      PORT: "8081"
+      HOST: 0.0.0.0
+      MAX_BODY_SIZE: "1048576"
+      MAX_DURATION: 10s
+    expose:
+      - "8081"
+    networks:
+      - private
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+
+networks:
+  public: {}
+  private:
+    internal: true
+
+secrets:
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt

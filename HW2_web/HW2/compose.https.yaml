@@ -1,0 +1,52 @@
+# Alternative full configuration: use INSTEAD OF compose.yaml, not as an override.
+services:
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [public]
+    depends_on: [proxy]
+
+  proxy:
+    build: .
+    environment:
+      UPSTREAM_URL: http://legacy:8081
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      JWT_ISSUER: http-lab
+      JWT_AUDIENCE: legacy-api
+    secrets: [jwt_secret]
+    expose: ["8080"]
+    networks: [public, private]
+    depends_on: [legacy]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+  legacy:
+    image: ghcr.io/mccutchen/go-httpbin:2.20.0
+    environment:
+      PORT: "8081"
+      HOST: 0.0.0.0
+      MAX_BODY_SIZE: "1048576"
+      MAX_DURATION: 10s
+    expose: ["8081"]
+    networks: [private]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+networks:
+  public: {}
+  private:
+    internal: true
+secrets:
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+volumes:
+  caddy_data: {}
+  caddy_config: {}

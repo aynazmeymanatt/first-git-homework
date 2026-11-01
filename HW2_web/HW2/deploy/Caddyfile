@@ -1,0 +1,5 @@
+# Local TLS termination demo. Trust the local CA for normal certificate validation.
+localhost {
+    tls internal
+    reverse_proxy proxy:8080
+}
